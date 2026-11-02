@@ -44,6 +44,8 @@ jobs:
 
       - name: Brick-flag guard (fail fast before wasting a build)
         run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y cmake >/dev/null
           if grep -n "DRIVER_MODESET" patches-vpu/rga-dumb-drv.c; then
             echo "ERROR: DRIVER_MODESET in rga-dumb-drv.c hard-bricks the box at boot."
             echo "Incidents: 2026-10-02 boot-ms.img and 2026-10-03 CI build (docs/08 §三.13)."
@@ -59,10 +61,17 @@ jobs:
             build-essential bc bison flex libssl-dev libelf-dev dwarves \
             cpio xz-utils patch curl e2fsprogs device-tree-compiler \
             dosfstools mtools gdisk gzip vim-common \
-            libsodium-dev libmsgpack-dev g++
+            libsodium-dev libmsgpack-dev libmsgpack-cxx-dev g++
 
       - name: Build SynoXtract
         run: |
+          if [ ! -f /usr/include/msgpack.hpp ]; then
+            echo "msgpack.hpp missing, building msgpack-cxx from source as fallback"
+            git clone --depth 1 --branch v6.1.1 https://github.com/msgpack/msgpack-cxx.git /tmp/msgpack-cxx
+            cmake -S /tmp/msgpack-cxx -B /tmp/msgpack-cxx/build -DMSGPACK_BUILD_TESTS=OFF -DMSGPACK_BUILD_EXAMPLES=OFF >/dev/null
+            cmake --build /tmp/msgpack-cxx/build -j"$(nproc)" >/dev/null
+            cmake --install /tmp/msgpack-cxx/build >/dev/null
+          fi
           g++ -O2 -std=c++17 -o tools/SynoXtract/synoxtract tools/SynoXtract/main.cpp -lsodium
           chmod +x tools/SynoXtract/synoxtract
           ./tools/SynoXtract/synoxtract --help 2>&1 | head -3 || true
