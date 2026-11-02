@@ -748,6 +748,13 @@ install -D -m 0644 "$PATCHED_UINITRD" "$BOOT_ROOT/boot/uInitrd"
 
 install -D -m 0755 "$KERNEL_IMAGE" "$BOOT_ROOT/boot/Image"
 install -D -m 0644 "$KERNEL_DTB" "$BOOT_ROOT/boot/$DTB_NAME"
+# FAT32 is case-sensitive: some stock OECT images ship the DTB as
+# rk3566-oec-box-wxy4-DSM.dtb (uppercase). Ship both spellings so the
+# extlinux "fdt" line resolves regardless of what the target partition had.
+DTB_UPPER="$(printf '%s' "$DTB_NAME" | tr '[:lower:]' '[:upper:]')"
+if [ "$DTB_UPPER" != "$DTB_NAME" ]; then
+	install -D -m 0644 "$KERNEL_DTB" "$BOOT_ROOT/boot/$DTB_UPPER"
+fi
 if [ -n "${SYNO_BOOT_LOGO:-}" ]; then
 	install -D -m 0644 "$SYNO_BOOT_LOGO" "$BOOT_ROOT/logo.bmp"
 fi
